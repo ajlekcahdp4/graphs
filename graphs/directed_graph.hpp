@@ -1,12 +1,12 @@
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
- * <alex.rom23@mail.ru> wrote this file.  As long as you retain this notice you
- * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.       Alex Romanov
+ * <tsimmerman.ss@phystech.edu>, <alex.rom23@mail.ru> wrote this file.  As long
+ * as you retain this notice you can do whatever you want with this stuff. If we
+ * meet some day, and you think this stuff is worth it, you can buy me a beer in
+ * return.
  * ----------------------------------------------------------------------------
  */
-
 #pragma once
 
 #include <algorithm>
@@ -58,7 +58,7 @@ class directed_graph;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first_search;
+class breadth_first;
 
 template <typename node_t>
   requires std::derived_from<node_t, graph_node<typename node_t::value_type>>
@@ -122,8 +122,8 @@ public:
 
   // returns true if second is reachable from the first
   bool reachable(const value_type &first, const value_type &second) const {
-    breadth_first_search search{*this};
-    return search(first, second);
+    breadth_first search{*this};
+    return search(first, [&second](auto &&val) { return val == second; });
   }
 
   auto find(const value_type &val) const { return m_adj_list.find(val); }
@@ -156,7 +156,7 @@ template <typename T> using basic_directed_graph = directed_graph<graph_node<T>>
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first_search final {
+class breadth_first final {
   const graph_t &m_graph;
   using value_type = typename graph_t::value_type;
 
@@ -173,11 +173,12 @@ class breadth_first_search final {
   };
 
 public:
-  breadth_first_search(const graph_t &graph) : m_graph{graph} {}
+  breadth_first(const graph_t &graph) : m_graph{graph} {}
 
-  bool operator()(const value_type &root_val, const value_type &target) const {
+  template <typename F>
+    requires std::is_same_v<std::invoke_result_t<F, value_type>, bool> bool
+  operator()(const value_type &root_val, F func) const {
     if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
-    if (!m_graph.contains(target)) return false;
 
     std::unordered_map<value_type, bfs_node> nodes;
     auto &&root_node = nodes.insert({root_val, {}}).first->second;
@@ -188,7 +189,7 @@ public:
     que.push_back(root_val);
     while (!que.empty()) {
       auto &&curr = que.front();
-      if (curr == target) return true;
+      if (func(curr)) return true;
       que.pop_front();
       auto &&curr_node = nodes.insert({curr, {}}).first->second;
       auto &&curr_graph_node = m_graph.find(curr)->second;

@@ -1,9 +1,10 @@
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
- * <alex.rom23@mail.ru> wrote this file.  As long as you retain this notice you
- * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.       Alex Romanov
+ * <tsimmerman.ss@phystech.edu>, <alex.rom23@mail.ru> wrote this file.  As long
+ * as you retain this notice you can do whatever you want with this stuff. If we
+ * meet some day, and you think this stuff is worth it, you can buy me a beer in
+ * return.
  * ----------------------------------------------------------------------------
  */
 
@@ -21,8 +22,8 @@ template <typename T> struct dag : public directed_graph<graph_node<T>> {
   bool insert(const value_type &first, const value_type &second) override {
     if (!contains(first)) insert(first);
     if (!contains(second)) insert(second);
-    breadth_first_search search{*this};
-    auto &&cycle_possible = search(second, first);
+    breadth_first search{*this};
+    auto &&cycle_possible = search(second, [&first](auto &&val) { return val == first; });
     if (cycle_possible) return false;
     return base::insert_base(first, second);
   }
