@@ -98,12 +98,16 @@ public:
   // checks if vertex exists
   auto contains(const value_type &val) const { return m_adj_list.contains(val); }
 
+  // returns number of edges in the graph
   size_type edges() const { return m_edge_n; }
 
+  // returns number of vertices in the graph
   size_type vertices() const { return m_adj_list.size(); }
 
+  // returns true if graph is empty
   bool empty() const { return !vertices(); }
 
+  // Returns number of val's successors in the graph
   size_type successors(const value_type &val) const {
     if (!m_adj_list.contains(val)) throw std::logic_error{"Attempt to get number of successors of non-existent vertex"};
     return m_adj_list[val].size();
@@ -111,9 +115,7 @@ public:
 
   // returns true if first is directly connected to second
   bool connected(const value_type &first, const value_type &second) const {
-    if (!(m_adj_list.contains(first) && m_adj_list.contains(second)))
-      throw std::logic_error{"Attempt to check for connection with non-existent vertex"};
-
+    if (!(m_adj_list.contains(first) && m_adj_list.contains(second))) return false;
     auto &&first_node = m_adj_list.at(first);
     auto &&found = std::find(first_node.begin(), first_node.end(), second);
     if (found == first_node.end()) return false;
@@ -136,13 +138,15 @@ public:
   auto cend() const { return m_adj_list.cend(); }
 
 protected:
+  // insertes vertex if they are not already in the graph
   bool insert_base(const value_type &val) {
     auto &&[iter, inserted] = m_adj_list.insert({val, {val}});
     if (!inserted) return false;
     return true;
   }
 
-  // inserts vertices if they are not already at the DG
+  // inserts edge to the graph if it is not already inserted
+  // inserts vertices if they are not already in the graph.
   bool insert_base(const value_type &vert1, const value_type &vert2) {
     if (!(m_adj_list.contains(vert1) && m_adj_list.contains(vert2))) return false;
     auto &&inserted = m_adj_list.at(vert1).add_adj(vert2);
@@ -175,6 +179,8 @@ class breadth_first_traversal final {
 public:
   breadth_first_traversal(const graph_t &graph) : m_graph{graph} {}
 
+  // Breadth first traversal of the graph. Applying func to every vertex in order.
+  // Returns true if predicate returns true at some vertex. Othervise returns false.
   template <typename F>
     requires std::is_same_v<std::invoke_result_t<F, value_type>, bool> bool
   operator()(const value_type &root_val, F func) const {
@@ -207,6 +213,7 @@ public:
     return false;
   }
 
+  // Breadth first traversal of the graph. Applying func to every vertex in order.
   template <typename F>
     requires std::is_same_v<std::invoke_result_t<F, value_type>, void>
   void operator()(const value_type &root_val, F func) const {

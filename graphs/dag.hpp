@@ -12,6 +12,8 @@
 
 #include "directed_graph.hpp"
 
+#include <cassert>
+
 namespace graphs {
 
 template <typename T> struct dag : public directed_graph<graph_node<T>> {
@@ -19,12 +21,12 @@ template <typename T> struct dag : public directed_graph<graph_node<T>> {
   using base::contains;
   using base::insert;
   using typename base::value_type;
+
+  // inserts edge from first to second to the DAG. If NDEBUG not defined checks if cycle is possible.
   bool insert(const value_type &first, const value_type &second) override {
     if (!contains(first)) insert(first);
     if (!contains(second)) insert(second);
-    breadth_first_traversal search{*this};
-    auto &&cycle_possible = search(second, [&first](auto &&val) { return val == first; });
-    if (cycle_possible) return false;
+    assert(!base::reachable(second, first) && "Attempt to create cycle in DAG");
     return base::insert_base(first, second);
   }
 };

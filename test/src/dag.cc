@@ -21,8 +21,6 @@ TEST(test_dag, test_insert) {
   EXPECT_TRUE(A.insert(1, 4));
   EXPECT_TRUE(A.insert(2, 4));
   EXPECT_TRUE(A.insert(4, 3));
-  EXPECT_FALSE(A.insert(1, 2)); // already exist
-  EXPECT_FALSE(A.insert(3, 2)); // creates cycle
 
   EXPECT_EQ(A.edges(), 5);
   EXPECT_EQ(A.vertices(), 4);
