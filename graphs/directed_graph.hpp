@@ -58,7 +58,7 @@ class directed_graph;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first;
+class breadth_first_traversal;
 
 template <typename node_t>
   requires std::derived_from<node_t, graph_node<typename node_t::value_type>>
@@ -122,7 +122,7 @@ public:
 
   // returns true if second is reachable from the first
   bool reachable(const value_type &first, const value_type &second) const {
-    breadth_first search{*this};
+    breadth_first_traversal search{*this};
     return search(first, [&second](auto &&val) { return val == second; });
   }
 
@@ -156,7 +156,7 @@ template <typename T> using basic_directed_graph = directed_graph<graph_node<T>>
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first final {
+class breadth_first_traversal final {
   const graph_t &m_graph;
   using value_type = typename graph_t::value_type;
 
@@ -173,7 +173,7 @@ class breadth_first final {
   };
 
 public:
-  breadth_first(const graph_t &graph) : m_graph{graph} {}
+  breadth_first_traversal(const graph_t &graph) : m_graph{graph} {}
 
   template <typename F>
     requires std::is_same_v<std::invoke_result_t<F, value_type>, bool> bool
@@ -205,6 +205,37 @@ public:
       curr_node.m_color = color_t::E_BLACK;
     }
     return false;
+  }
+
+  template <typename F>
+    requires std::is_same_v<std::invoke_result_t<F, value_type>, void>
+  void operator()(const value_type &root_val, F func) const {
+    if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
+
+    std::unordered_map<value_type, bfs_node> nodes;
+    auto &&root_node = nodes.insert({root_val, {}}).first->second;
+    root_node.m_color = color_t::E_GRAY;
+    root_node.m_dist = 0;
+
+    std::deque<value_type> que;
+    que.push_back(root_val);
+    while (!que.empty()) {
+      auto &&curr = que.front();
+      func(curr);
+      que.pop_front();
+      auto &&curr_node = nodes.insert({curr, {}}).first->second;
+      auto &&curr_graph_node = m_graph.find(curr)->second;
+      for (auto &&adj : curr_graph_node) {
+        auto &&adj_node = nodes.insert({adj, {}}).first->second;
+        if (adj_node.m_color == color_t::E_WHITE) {
+          adj_node.m_color = color_t::E_GRAY;
+          adj_node.m_dist = curr_node.m_dist + 1;
+          adj_node.m_prev = &curr_node;
+          que.push_back(adj);
+        }
+      }
+      curr_node.m_color = color_t::E_BLACK;
+    }
   }
 };
 
