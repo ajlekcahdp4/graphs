@@ -58,7 +58,7 @@ class directed_graph;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first;
+class breadth_first_traversal;
 
 template <typename node_t>
   requires std::derived_from<node_t, graph_node<typename node_t::value_type>>
@@ -98,12 +98,16 @@ public:
   // checks if vertex exists
   auto contains(const value_type &val) const { return m_adj_list.contains(val); }
 
+  // returns number of edges in the graph
   size_type edges() const { return m_edge_n; }
 
+  // returns number of vertices in the graph
   size_type vertices() const { return m_adj_list.size(); }
 
+  // returns true if graph is empty
   bool empty() const { return !vertices(); }
 
+  // Returns number of val's successors in the graph
   size_type successors(const value_type &val) const {
     if (!m_adj_list.contains(val)) throw std::logic_error{"Attempt to get number of successors of non-existent vertex"};
     return m_adj_list[val].size();
@@ -111,9 +115,7 @@ public:
 
   // returns true if first is directly connected to second
   bool connected(const value_type &first, const value_type &second) const {
-    if (!(m_adj_list.contains(first) && m_adj_list.contains(second)))
-      throw std::logic_error{"Attempt to check for connection with non-existent vertex"};
-
+    if (!(m_adj_list.contains(first) && m_adj_list.contains(second))) return false;
     auto &&first_node = m_adj_list.at(first);
     auto &&found = std::find(first_node.begin(), first_node.end(), second);
     if (found == first_node.end()) return false;
@@ -122,7 +124,7 @@ public:
 
   // returns true if second is reachable from the first
   bool reachable(const value_type &first, const value_type &second) const {
-    breadth_first search{*this};
+    breadth_first_traversal search{*this};
     return search(first, [&second](auto &&val) { return val == second; });
   }
 
@@ -136,13 +138,15 @@ public:
   auto cend() const { return m_adj_list.cend(); }
 
 protected:
+  // insertes vertex if they are not already in the graph
   bool insert_base(const value_type &val) {
     auto &&[iter, inserted] = m_adj_list.insert({val, {val}});
     if (!inserted) return false;
     return true;
   }
 
-  // inserts vertices if they are not already at the DG
+  // inserts edge to the graph if it is not already inserted
+  // inserts vertices if they are not already in the graph.
   bool insert_base(const value_type &vert1, const value_type &vert2) {
     if (!(m_adj_list.contains(vert1) && m_adj_list.contains(vert2))) return false;
     auto &&inserted = m_adj_list.at(vert1).add_adj(vert2);
@@ -156,7 +160,7 @@ template <typename T> using basic_directed_graph = directed_graph<graph_node<T>>
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-class breadth_first final {
+class breadth_first_traversal final {
   const graph_t &m_graph;
   using value_type = typename graph_t::value_type;
 
@@ -173,8 +177,10 @@ class breadth_first final {
   };
 
 public:
-  breadth_first(const graph_t &graph) : m_graph{graph} {}
+  breadth_first_traversal(const graph_t &graph) : m_graph{graph} {}
 
+  // Breadth first traversal of the graph. Applying func to every vertex in order.
+  // Returns true if predicate returns true at some vertex. Othervise returns false.
   template <typename F>
     requires std::is_same_v<std::invoke_result_t<F, value_type>, bool> bool
   operator()(const value_type &root_val, F func) const {
@@ -205,6 +211,38 @@ public:
       curr_node.m_color = color_t::E_BLACK;
     }
     return false;
+  }
+
+  // Breadth first traversal of the graph. Applying func to every vertex in order.
+  template <typename F>
+    requires std::is_same_v<std::invoke_result_t<F, value_type>, void>
+  void operator()(const value_type &root_val, F func) const {
+    if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
+
+    std::unordered_map<value_type, bfs_node> nodes;
+    auto &&root_node = nodes.insert({root_val, {}}).first->second;
+    root_node.m_color = color_t::E_GRAY;
+    root_node.m_dist = 0;
+
+    std::deque<value_type> que;
+    que.push_back(root_val);
+    while (!que.empty()) {
+      auto &&curr = que.front();
+      func(curr);
+      que.pop_front();
+      auto &&curr_node = nodes.insert({curr, {}}).first->second;
+      auto &&curr_graph_node = m_graph.find(curr)->second;
+      for (auto &&adj : curr_graph_node) {
+        auto &&adj_node = nodes.insert({adj, {}}).first->second;
+        if (adj_node.m_color == color_t::E_WHITE) {
+          adj_node.m_color = color_t::E_GRAY;
+          adj_node.m_dist = curr_node.m_dist + 1;
+          adj_node.m_prev = &curr_node;
+          que.push_back(adj);
+        }
+      }
+      curr_node.m_color = color_t::E_BLACK;
+    }
   }
 };
 

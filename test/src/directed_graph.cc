@@ -79,7 +79,7 @@ TEST(test_directed_graph, test_reachable) {
   EXPECT_FALSE(A.reachable(3, 1));
 }
 
-TEST(test_directed_graph, test_BFS) {
+TEST(test_directed_graph, test_BFT_search) {
   directed_graph A;
   A.insert(3, 6);
   A.insert(3, 5);
@@ -88,9 +88,25 @@ TEST(test_directed_graph, test_BFS) {
   A.insert(2, 5);
   A.insert(1, 2);
   A.insert(1, 4);
-  graphs::breadth_first search{A};
+  graphs::breadth_first_traversal search{A};
   EXPECT_TRUE(search(3, [](auto &&val) { return val == 2; }));
   EXPECT_TRUE(search(2, [](auto &&val) { return val == 5; }));
   EXPECT_FALSE(search(2, [](auto &&val) { return val == 3; }));
   EXPECT_FALSE(search(4, [](auto &&val) { return val == 11; }));
+}
+
+TEST(test_directed_graph, test_BFT_schedule) {
+  directed_graph A;
+  A.insert(3, 6);
+  A.insert(3, 5);
+  A.insert(5, 4);
+  A.insert(4, 2);
+  A.insert(2, 5);
+  A.insert(1, 2);
+  A.insert(1, 4);
+  graphs::breadth_first_traversal search{A};
+  std::vector<int> res;
+  search(3, [&res](auto &&val) { res.push_back(val); });
+  std::vector<int> ans{3, 6, 5, 4, 2};
+  EXPECT_EQ(res, ans);
 }
