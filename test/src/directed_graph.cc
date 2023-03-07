@@ -63,6 +63,27 @@ TEST(test_directed_graph, test_connected) {
   EXPECT_FALSE(A.connected(5, 3));
 }
 
+TEST(test_directed_graph, test_custom_hash_connected) {
+
+  const auto hash_int = [](int v) { return static_cast<unsigned>(v); };
+  graphs::directed_graph<graphs::graph_node<int>, decltype(hash_int)> A;
+  A.insert(3, 6);
+  A.insert(3, 5);
+  A.insert(5, 4);
+  A.insert(4, 2);
+  A.insert(2, 5);
+  A.insert(1, 2);
+  A.insert(1, 4);
+  A.insert(1, 1);
+
+  EXPECT_TRUE(A.connected(3, 5));
+  EXPECT_TRUE(A.connected(1, 2));
+  EXPECT_TRUE(A.connected(1, 1));
+  EXPECT_FALSE(A.connected(1, 6));
+  EXPECT_FALSE(A.connected(1, 3));
+  EXPECT_FALSE(A.connected(5, 3));
+}
+
 TEST(test_directed_graph, test_reachable) {
   directed_graph A;
   A.insert(3, 6);
