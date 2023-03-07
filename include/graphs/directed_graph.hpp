@@ -189,7 +189,7 @@ public:
   operator()(const value_type &root_val, F func) const {
     if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
 
-    std::unordered_map<value_type, bfs_node> nodes;
+    std::unordered_map<value_type, bfs_node, typename graph_t::hash_type> nodes;
     auto &&root_node = nodes.insert({root_val, {}}).first->second;
     root_node.m_color = color_t::E_GRAY;
     root_node.m_dist = 0;
@@ -222,7 +222,7 @@ public:
   void operator()(const value_type &root_val, F func) const {
     if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
 
-    std::unordered_map<value_type, bfs_node> nodes;
+    std::unordered_map<value_type, bfs_node, typename graph_t::hash_type> nodes;
     auto &&root_node = nodes.insert({root_val, {}}).first->second;
     root_node.m_color = color_t::E_GRAY;
     root_node.m_dist = 0;
@@ -267,7 +267,7 @@ std::vector<typename graph_t::value_type> recursive_topo_sort(graph_t &graph) {
 
   int time = 0;
   std::vector<value_type> scheduled;
-  std::unordered_map<value_type, bfs_node> nodes;
+  std::unordered_map<value_type, bfs_node, typename graph_t::hash_type> nodes;
 
   for (auto &&val : graph)
     nodes.insert({val.first, {}});
