@@ -58,7 +58,7 @@ template <typename node_t, typename hash_t = std::hash<typename node_t::value_ty
 class directed_graph;
 
 template <typename graph_t>
-  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
+  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type, typename graph_t::hash_type>>
 class breadth_first_traversal;
 
 template <typename node_t, typename hash_t>
@@ -69,6 +69,7 @@ public:
   using size_type = std::size_t;
   using value_type = typename node_t::value_type;
   using node_type = node_t;
+  using hash_type = hash_t;
 
 private:
   std::unordered_map<value_type, node_t, hash_t> m_adj_list;
@@ -161,7 +162,7 @@ protected:
 template <typename T> using basic_directed_graph = directed_graph<graph_node<T>>;
 
 template <typename graph_t>
-  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
+  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type, typename graph_t::hash_type>>
 class breadth_first_traversal final {
   const graph_t &m_graph;
   using value_type = typename graph_t::value_type;
@@ -249,7 +250,7 @@ public:
 };
 
 template <typename graph_t>
-  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
+  requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type, typename graph_t::hash_type>>
 std::vector<typename graph_t::value_type> recursive_topo_sort(graph_t &graph) {
   using value_type = typename graph_t::value_type;
   enum class color_t {
