@@ -52,16 +52,18 @@ public:
   using vector::size;
 };
 
-template <typename node_t>
-  requires std::derived_from<node_t, graph_node<typename node_t::value_type>>
+template <typename node_t, typename hash_t = std::hash<typename node_t::value_type>>
+  requires std::derived_from<node_t, graph_node<typename node_t::value_type>> &&
+    std::invocable<hash_t, typename node_t::value_type>
 class directed_graph;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
 class breadth_first_traversal;
 
-template <typename node_t>
-  requires std::derived_from<node_t, graph_node<typename node_t::value_type>>
+template <typename node_t, typename hash_t>
+  requires std::derived_from<node_t, graph_node<typename node_t::value_type>> &&
+    std::invocable<hash_t, typename node_t::value_type>
 class directed_graph {
 public:
   using size_type = std::size_t;
@@ -69,7 +71,7 @@ public:
   using node_type = node_t;
 
 private:
-  std::unordered_map<value_type, node_t> m_adj_list;
+  std::unordered_map<value_type, node_t, hash_t> m_adj_list;
   size_type m_edge_n = 0;
 
 public:
