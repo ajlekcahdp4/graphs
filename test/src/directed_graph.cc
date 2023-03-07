@@ -110,3 +110,15 @@ TEST(test_directed_graph, test_BFT_schedule) {
   std::vector<int> ans{3, 6, 5, 4, 2};
   EXPECT_EQ(res, ans);
 }
+
+TEST(test_directed_graph, test_topological_sort) {
+  directed_graph A;
+  A.insert(1, 2);
+  A.insert(1, 3);
+  A.insert(1, 4);
+  A.insert(2, 4);
+  A.insert(4, 3);
+  std::vector<int> res = graphs::recursive_topo_sort(A);
+  std::vector ans{3, 4, 2, 1};
+  EXPECT_EQ(res, ans);
+}

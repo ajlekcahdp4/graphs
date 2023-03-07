@@ -248,8 +248,7 @@ public:
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type>>
-std::vector<typename graph_t::value_type>
-recursive_topo_sort(graph_t &graph, const typename graph_t::value_type &root_val) {
+std::vector<typename graph_t::value_type> recursive_topo_sort(graph_t &graph) {
   using value_type = typename graph_t::value_type;
   enum class color_t {
     E_WHITE,
@@ -257,12 +256,10 @@ recursive_topo_sort(graph_t &graph, const typename graph_t::value_type &root_val
     E_BLACK
   };
 
-  struct bfs_node : public graph_t::node_type {
-    int m_start = -1, m_finish = -1;
+  struct bfs_node {
+    unsigned m_finish = std::numeric_limits<unsigned>::max();
     color_t m_color = color_t::E_WHITE;
     bfs_node *m_prev = nullptr;
-
-    bfs_node(const value_type &val) : graph_t::node_type{val} {}
   };
 
   int time = 0;
@@ -270,12 +267,11 @@ recursive_topo_sort(graph_t &graph, const typename graph_t::value_type &root_val
   std::unordered_map<value_type, bfs_node> nodes;
 
   for (auto &&val : graph)
-    nodes.insert({val.first, val.first});
+    nodes.insert({val.first, {}});
 
   const auto dfs_visit = [&time, &nodes, &graph, &scheduled](const value_type &val, auto &&dfs_visit) -> void {
     ++time;
     auto &&cur_node = nodes.at(val);
-    cur_node.m_start = time;
     cur_node.m_color = color_t::E_GRAY;
     auto &&graph_node = graph.find(val)->second;
     for (auto &&adj : graph_node) {
@@ -294,7 +290,7 @@ recursive_topo_sort(graph_t &graph, const typename graph_t::value_type &root_val
   for (auto &&val : graph) {
     if (nodes.at(val.first).m_color == color_t::E_WHITE) dfs_visit(val.first, dfs_visit);
   }
-  return std::vector(scheduled.rbegin(), scheduled.rend());
+  return scheduled;
 }
 
 } // namespace graphs
