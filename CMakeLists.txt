@@ -3,7 +3,10 @@ cmake_minimum_required(VERSION 3.11)
 project(
   graphs
   VERSION 1.0.0
-  LANGUAGES CXX)
+  LANGUAGES CXX
+)
+
+set(CMAKE_CXX_STANDARD 20)
 
 if(MSVC)
   add_compile_options(/W4)
