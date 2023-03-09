@@ -16,10 +16,9 @@
 
 namespace graphs {
 
-template <typename T, typename hash_t = std::hash<T>>
-  requires std::invocable<hash_t, T>
-struct dag : public directed_graph<graph_node<T>, hash_t> {
-  using base = directed_graph<graph_node<T>, hash_t>;
+template <typename T, std::invocable<T> hash_t = std::hash<T>>
+struct dag : public directed_graph<detail::basic_graph_node<T>, hash_t> {
+  using base = directed_graph<detail::basic_graph_node<T>, hash_t>;
   using base::contains;
   using base::insert;
   using typename base::value_type;

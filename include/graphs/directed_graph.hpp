@@ -18,11 +18,59 @@
 #include <numeric>
 #include <stdexcept>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace graphs {
 
-template <typename T> class graph_node final : private std::vector<T> {
+namespace detail {
+
+// clang-format off
+template <typename t_comp, typename t_key>
+concept comparator = requires(t_comp functor, t_key a, t_key b) {
+  { functor(a, b) } -> std::convertible_to<bool>;
+};
+
+template <typename t_hash, typename t_key>
+concept hasher = std::invocable<t_hash, t_key>;
+
+template <typename t_node>
+concept graph_node = requires() {
+  typename t_node::key_type;
+  typename t_node::edge_type;
+  typename t_node::hash_type;
+  typename t_node::comp_type;
+};
+// clang-format on
+
+template <graph_node t_node> using graph_node_key_t = typename t_node::key_type;
+template <graph_node t_node> using graph_node_edge_t = typename t_node::edge_type;
+template <graph_node t_node> using graph_node_hash_t = typename t_node::hash_type;
+template <graph_node t_node> using graph_node_comp_t = typename t_node::comp_type;
+
+template <typename t_key, typename t_edge> struct adjacency_list_traits {
+  using entry_type = std::pair<t_key, t_edge>;
+  using type = std::vector<entry_type>;
+};
+
+template <typename t_key> struct adjacency_list_traits<t_key, void> {
+  using entry_type = t_key;
+  using type = std::vector<entry_type>;
+};
+
+template <typename t_key, typename t_edge> using adjacency_list_t = typename adjacency_list_traits<t_key, t_edge>::type;
+
+template <typename t_key, typename t_edge> class temp_graph_node : private adjacency_list_t<t_key, t_edge> {
+  t_key m_val;
+
+  using adjacency_list = adjacency_list_t<t_key, t_edge>;
+
+public:
+  using key_type = t_key;
+  using edge_type = t_edge;
+};
+
+template <typename T> class basic_graph_node : private adjacency_list_t<T, void> {
   T m_val;
 
   using vector = std::vector<T>;
@@ -30,9 +78,9 @@ template <typename T> class graph_node final : private std::vector<T> {
 public:
   using value_type = T;
 
-  graph_node(const value_type val = value_type{}) : m_val{std::move(val)} {}
+  basic_graph_node(const value_type val = value_type{}) : m_val{std::move(val)} {}
 
-  operator value_type() { return m_val; }
+  explicit operator value_type() { return m_val; }
 
   value_type value() const { return m_val; }
 
@@ -43,27 +91,25 @@ public:
   }
 
   using vector::begin;
-  using vector::end;
-
   using vector::cbegin;
   using vector::cend;
-
   using vector::empty;
+  using vector::end;
   using vector::size;
 };
 
-template <typename node_t, typename hash_t = std::hash<typename node_t::value_type>>
-  requires std::derived_from<node_t, graph_node<typename node_t::value_type>> &&
-    std::invocable<hash_t, typename node_t::value_type>
+} // namespace detail
+
+template <typename node_t, std::invocable<typename node_t::value_type> hash_t>
+  requires std::derived_from<node_t, detail::basic_graph_node<typename node_t::value_type>>
 class directed_graph;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type, typename graph_t::hash_type>>
 class breadth_first_traversal;
 
-template <typename node_t, typename hash_t>
-  requires std::derived_from<node_t, graph_node<typename node_t::value_type>> &&
-    std::invocable<hash_t, typename node_t::value_type>
+template <typename node_t, std::invocable<typename node_t::value_type> hash_t>
+  requires std::derived_from<node_t, detail::basic_graph_node<typename node_t::value_type>>
 class directed_graph {
 public:
   using size_type = std::size_t;
@@ -159,7 +205,8 @@ protected:
   }
 };
 
-template <typename T> using basic_directed_graph = directed_graph<graph_node<T>>;
+template <typename T, std::invocable<T> hash_t = std::hash<T>>
+using basic_directed_graph = directed_graph<detail::basic_graph_node<T>, hash_t>;
 
 template <typename graph_t>
   requires std::derived_from<graph_t, directed_graph<typename graph_t::node_type, typename graph_t::hash_type>>
