@@ -64,7 +64,6 @@ TEST(test_directed_graph, test_connected) {
 }
 
 TEST(test_directed_graph, test_custom_hash_connected) {
-
   const auto hash_int = [](int v) { return static_cast<unsigned>(v); };
   graphs::directed_graph<graphs::graph_node<int>, decltype(hash_int)> A;
   A.insert(3, 6);
@@ -133,7 +132,6 @@ TEST(test_directed_graph, test_BFT_schedule) {
 }
 
 TEST(test_directed_graph, test_custom_hash_BFT_search) {
-
   const auto hash_int = [](int v) { return static_cast<unsigned>(v); };
   graphs::directed_graph<graphs::graph_node<int>, decltype(hash_int)> A;
   A.insert(3, 6);
@@ -163,7 +161,6 @@ TEST(test_directed_graph, test_topological_sort) {
 }
 
 TEST(test_directed_graph, test_custom_hash_topological_sort) {
-
   const auto hash_int = [](int v) { return static_cast<unsigned>(v); };
   graphs::directed_graph<graphs::graph_node<int>, decltype(hash_int)> A;
   A.insert(1, 2);
