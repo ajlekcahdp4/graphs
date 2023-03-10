@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 using directed_graph = graphs::basic_directed_graph<int, void, void>;
+using graphs::breadth_first_search;
 
 TEST(test_directed_graph, test_insert_vertex) {
   directed_graph A;
@@ -117,16 +118,17 @@ TEST(test_directed_graph, test_BFT_search) {
   A.insert(1, 2);
   A.insert(1, 4);
 
-  graphs::breadth_first_searcher bfs{A};
+  const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
 
-  EXPECT_TRUE(bfs(3, [](auto &&val) { return val == 2; }));
-  EXPECT_TRUE(bfs(2, [](auto &&val) { return val == 5; }));
-  EXPECT_FALSE(bfs(2, [](auto &&val) { return val == 3; }));
-  EXPECT_FALSE(bfs(4, [](auto &&val) { return val == 11; }));
+  EXPECT_TRUE(bfs(3, [](auto &&val) { return val.key() == 2; }));
+  EXPECT_TRUE(bfs(2, [](auto &&val) { return val.key() == 5; }));
+  EXPECT_FALSE(bfs(2, [](auto &&val) { return val.key() == 3; }));
+  EXPECT_FALSE(bfs(4, [](auto &&val) { return val.key() == 11; }));
 }
 
 TEST(test_directed_graph, test_BFT_schedule) {
   directed_graph A;
+
   A.insert(3, 6);
   A.insert(3, 5);
   A.insert(5, 4);
@@ -134,10 +136,10 @@ TEST(test_directed_graph, test_BFT_schedule) {
   A.insert(2, 5);
   A.insert(1, 2);
   A.insert(1, 4);
-  graphs::breadth_first_searcher bfs{A};
-  std::vector<int> res;
-  bfs(3, [&res](auto &&val) { res.push_back(val); });
-  std::vector<int> ans{3, 6, 5, 4, 2};
+
+  const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
+  std::vector<int> res, ans = {3, 6, 5, 4, 2};
+  bfs(3, [&res](auto &&val) { res.push_back(val.key()); });
   EXPECT_EQ(res, ans);
 }
 
@@ -153,9 +155,9 @@ TEST(test_directed_graph, test_custom_hash_BFT_search) {
   A.insert(1, 2);
   A.insert(1, 4);
 
-  graphs::breadth_first_searcher bfs{A};
+  const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
   std::vector<int> res;
-  bfs(3, [&res](auto &&val) { res.push_back(val); });
+  bfs(3, [&res](auto &&val) { res.push_back(val.key()); });
 
   std::vector<int> ans = {3, 6, 5, 4, 2};
   EXPECT_EQ(res, ans);
@@ -200,7 +202,7 @@ TEST(test_directed_graph, test_edge_attributes) {
   EXPECT_TRUE(A.connected("1", "2"));
 }
 
-TEST(test_directed_graph, test_attributes_search) {
+TEST(test_directed_graph, test_attributes_1) {
   graphs::basic_directed_graph<std::string, int, int> A;
 
   EXPECT_TRUE(A.insert({"1", 1}));
@@ -214,6 +216,41 @@ TEST(test_directed_graph, test_attributes_search) {
   EXPECT_EQ(key, "1");
   EXPECT_EQ(attr, 1);
 
-  graphs::breadth_first_searcher bfs{A};
-  EXPECT_TRUE(bfs("1", [](auto &&val) -> bool { return val == "2"; }));
+  using graphs::breadth_first_search;
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
+}
+
+TEST(test_directed_graph, test_attributes_2) {
+  graphs::basic_directed_graph<std::string, int, void> A;
+
+  EXPECT_TRUE(A.insert({"1", 1}));
+  EXPECT_TRUE(A.insert({"2", 0}));
+
+  EXPECT_TRUE(A.create_link("1", "2"));
+  EXPECT_TRUE(A.connected("1", "2"));
+
+  auto found = A.find("1");
+  auto [key, attr] = found->second.value();
+  EXPECT_EQ(key, "1");
+  EXPECT_EQ(attr, 1);
+
+  using graphs::breadth_first_search;
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
+}
+
+TEST(test_directed_graph, test_attributes_3) {
+  graphs::basic_directed_graph<std::string, void, char> A;
+
+  EXPECT_TRUE(A.insert("1"));
+  EXPECT_TRUE(A.insert("2"));
+
+  EXPECT_TRUE(A.create_link("1", "2", 'c'));
+  EXPECT_TRUE(A.connected("1", "2"));
+
+  auto found = A.find("1");
+  auto key = found->second.value();
+  EXPECT_EQ(key, "1");
+
+  using graphs::breadth_first_search;
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
 }

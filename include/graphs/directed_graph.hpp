@@ -304,6 +304,77 @@ protected:
   }
 };
 
+namespace detail {
+
+enum class bfs_color {
+  E_WHITE,
+  E_GRAY,
+  E_BLACK
+};
+
+struct bfs_node {
+  bfs_color m_color = bfs_color::E_WHITE;
+};
+
+}; // namespace detail
+
+template <graph t_graph> using graph_key_t = typename t_graph::key_type;
+template <graph t_graph> using graph_node_t = typename t_graph::node_type;
+template <graph t_graph> using graph_hash_t = typename t_graph::hash_type;
+template <graph t_graph> using graph_comp_t = typename t_graph::comp_type;
+
+template <graph t_graph, std::invocable<graph_node_t<t_graph>> F>
+auto breadth_first_search(const t_graph &graph, const graph_key_t<t_graph> &root, F func) {
+  using graph_type = t_graph;
+
+  using key_type = graph_key_t<graph_type>;
+  using hash_type = graph_hash_t<graph_type>;
+  using node_type = graph_node_t<graph_type>;
+  using comp_type = graph_comp_t<graph_type>;
+
+  using detail::bfs_color;
+  using detail::bfs_node;
+
+  if (!graph.contains(root)) throw std::out_of_range{"Search root out of range"};
+  constexpr auto can_break = std::convertible_to<std::invoke_result_t<F, node_type>, bool>;
+
+  std::unordered_map<key_type, bfs_node, hash_type, comp_type> nodes;
+  nodes.insert({root, bfs_node{bfs_color::E_GRAY}});
+  std::deque<const node_type *> queue;
+
+  queue.push_back(std::addressof(graph.find(root)->second));
+
+  while (!queue.empty()) {
+    const node_type &curr = *queue.front(); // Get the reference to the queued node.
+    const auto &curr_key = curr.key();
+
+    if constexpr (can_break) {
+      if (func(curr)) return true;
+    } else {
+      func(curr);
+    }
+
+    queue.pop_front();
+
+    auto &curr_node = nodes.insert({curr_key, {}}).first->second;
+    const auto &curr_graph_node = graph.find(curr.key())->second;
+
+    for (const auto &adj : curr_graph_node) {
+      const auto key = graph_type::key_from_entry(adj);
+      auto &adj_node = nodes.insert({key, bfs_node{}}).first->second;
+
+      if (adj_node.m_color == bfs_color::E_WHITE) {
+        adj_node.m_color = bfs_color::E_GRAY;
+        queue.push_back(std::addressof(graph.find(key)->second));
+      }
+    }
+
+    curr_node.m_color = bfs_color::E_BLACK;
+  }
+
+  if constexpr (can_break) return false;
+}
+
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
 class directed_graph : private directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>>,
                        private t_hash,
@@ -365,8 +436,7 @@ public:
 
   // Returns true if there exists a path from first -> .... -> second
   bool reachable(const key_type &first, const key_type &second) const {
-    breadth_first_searcher search{*this};
-    return search(first, [&second](auto &&val) { return val == second; });
+    return breadth_first_search(*this, first, [&second](auto &&val) { return val.key() == second; });
   }
 
   // Returns number of val's successors in the graph
@@ -378,80 +448,18 @@ public:
     return m_adj_list[val].size();
   }
 
-  static key_type &get_key(value_type &val) { return traits::get_key_value(val); }
-  static const key_type &get_key(const value_type &val) { return traits::get_key_value(val); }
+  static key_type &key_from_value(value_type &val) { return traits::get_key_value(val); }
+  static const key_type &key_from_value(const value_type &val) { return traits::get_key_value(val); }
+
+  static key_type &key_from_entry(entry_type &entry) { return traits::get_key_entry(entry); }
+  static const key_type &key_from_entry(const entry_type &entry) { return traits::get_key_entry(entry); }
 };
 
 template <typename K, typename A, typename E, hasher<K> t_hash = std::hash<K>, comparator<K> t_comp = std::equal_to<K>>
 using basic_directed_graph = directed_graph<basic_graph_node<K, A, E>, t_hash, t_comp>;
 
-template <graph t_graph> class breadth_first_searcher final {
-  using graph_type = t_graph;
-
-  const graph_type &m_graph;
-
-  using key_type = typename graph_type::key_type;
-  using value_type = typename graph_type::value_type;
-  using hash_type = typename graph_type::hash_type;
-
-  enum class bfs_color {
-    E_WHITE,
-    E_GRAY,
-    E_BLACK
-  };
-
-  struct bfs_node {
-    bfs_color m_color = bfs_color::E_WHITE;
-  };
-
-public:
-  breadth_first_searcher(const graph_type &graph) : m_graph{graph} {}
-
-  // Breadth first traversal of the graph. Applying func to every vertex in order.
-  // Returns true if predicate returns true at some vertex. Othervise returns false.
-  template <typename F> auto operator()(const key_type &root, F func) const {
-    if (!m_graph.contains(root)) throw std::out_of_range{"Search root out of range"};
-    constexpr auto can_break = std::convertible_to<std::invoke_result_t<F, key_type>, bool>;
-
-    std::unordered_map<key_type, bfs_node, hash_type> nodes;
-    auto &root_node = nodes.insert({root, {}}).first->second;
-    root_node.m_color = bfs_color::E_GRAY;
-
-    std::deque<key_type> queue;
-    queue.push_back(root);
-
-    while (!queue.empty()) {
-      auto &&curr = queue.front();
-
-      if constexpr (can_break) {
-        if (func(curr)) return true;
-      } else {
-        func(curr);
-      }
-
-      queue.pop_front();
-      auto &curr_node = nodes.insert({curr, {}}).first->second;
-      const auto &curr_graph_node = m_graph.find(curr)->second;
-
-      for (const auto &adj : curr_graph_node) {
-        const auto key = t_graph::get_key(adj);
-        auto &adj_node = nodes.insert({key, {}}).first->second;
-
-        if (adj_node.m_color == bfs_color::E_WHITE) {
-          adj_node.m_color = bfs_color::E_GRAY;
-          queue.push_back(key);
-        }
-      }
-
-      curr_node.m_color = bfs_color::E_BLACK;
-    }
-
-    if constexpr (can_break) return false;
-  }
-};
-
-template <graph graph_t> std::vector<typename graph_t::value_type> recursive_topo_sort(graph_t &graph) {
-  using value_type = typename graph_t::value_type;
+template <graph t_graph> std::vector<typename t_graph::value_type> recursive_topo_sort(t_graph &graph) {
+  using value_type = typename t_graph::value_type;
 
   enum class node_color {
     E_WHITE,
@@ -461,11 +469,10 @@ template <graph graph_t> std::vector<typename graph_t::value_type> recursive_top
 
   struct bfs_node {
     node_color m_color = node_color::E_WHITE;
-    bfs_node *m_prev = nullptr;
   };
 
   std::vector<value_type> scheduled;
-  std::unordered_map<value_type, bfs_node, typename graph_t::hash_type> nodes;
+  std::unordered_map<value_type, bfs_node, typename t_graph::hash_type> nodes;
 
   for (const auto &val : graph) {
     nodes.insert({val.first, bfs_node{}});
@@ -479,7 +486,6 @@ template <graph graph_t> std::vector<typename graph_t::value_type> recursive_top
     for (auto &adj : graph_node) {
       auto &adj_node = nodes.at(adj);
       if (adj_node.m_color == node_color::E_WHITE) {
-        adj_node.m_prev = &cur_node;
         dfs_visit(adj, dfs_visit);
       }
     }
