@@ -16,20 +16,19 @@
 
 namespace graphs {
 
-template <typename T, std::invocable<T> hash_t = std::hash<T>>
-struct dag : public directed_graph<detail::basic_graph_node<T, void, void>, hash_t> {
-  using base = directed_graph<detail::basic_graph_node<T, void, void>, hash_t>;
+template <typename T, std::invocable<T> hash_t = std::hash<T>> struct dag : public basic_directed_graph<T, void, void> {
+  using base = basic_directed_graph<T, void, void>;
   using base::contains;
   using base::insert;
   using typename base::value_type;
 
-  // inserts edge from first to second to the DAG. If NDEBUG not defined checks if cycle is possible.
-  bool insert(const value_type &first, const value_type &second) override {
-    if (!contains(first)) insert(first);
-    if (!contains(second)) insert(second);
-    assert(!base::reachable(second, first) && "Attempt to create cycle in DAG");
-    return base::insert_base(first, second);
-  }
+  // // inserts edge from first to second to the DAG. If NDEBUG not defined checks if cycle is possible.
+  // bool insert(const value_type &first, const value_type &second) override {
+  //   if (!contains(first)) insert(first);
+  //   if (!contains(second)) insert(second);
+  //   assert(!base::reachable(second, first) && "Attempt to create cycle in DAG");
+  //   return base::insert_base(first, second);
+  // }
 };
 
 } // namespace graphs
