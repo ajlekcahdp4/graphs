@@ -181,7 +181,7 @@ concept graph = requires() {
 };
 // clang-format on
 
-template <graph> class breadth_first_traversal;
+template <graph> class breadth_first_searcher;
 
 template <
     graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp,
@@ -365,7 +365,7 @@ public:
 
   // Returns true if there exists a path from first -> .... -> second
   bool reachable(const key_type &first, const key_type &second) const {
-    breadth_first_traversal search{*this};
+    breadth_first_searcher search{*this};
     return search(first, [&second](auto &&val) { return val == second; });
   }
 
@@ -377,84 +377,90 @@ public:
 
     return m_adj_list[val].size();
   }
+
+  static key_type &get_key(value_type &val) { return traits::get_key_value(val); }
+  static const key_type &get_key(const value_type &val) { return traits::get_key_value(val); }
 };
 
 template <typename K, typename A, typename E, hasher<K> t_hash = std::hash<K>, comparator<K> t_comp = std::equal_to<K>>
 using basic_directed_graph = directed_graph<basic_graph_node<K, A, E>, t_hash, t_comp>;
 
-template <graph graph_t> class breadth_first_traversal final {
-  const graph_t &m_graph;
+template <graph t_graph> class breadth_first_searcher final {
+  using graph_type = t_graph;
 
-  using key_type = typename graph_t::key_type;
-  using value_type = typename graph_t::value_type;
+  const graph_type &m_graph;
 
-  enum class color_t {
+  using key_type = typename graph_type::key_type;
+  using value_type = typename graph_type::value_type;
+  using hash_type = typename graph_type::hash_type;
+
+  enum class bfs_color {
     E_WHITE,
     E_GRAY,
     E_BLACK
   };
 
   struct bfs_node {
-    unsigned m_dist = std::numeric_limits<unsigned>::max();
-    color_t m_color = color_t::E_WHITE;
-    bfs_node *m_prev = nullptr;
+    bfs_color m_color = bfs_color::E_WHITE;
   };
 
 public:
-  breadth_first_traversal(const graph_t &graph) : m_graph{graph} {}
+  breadth_first_searcher(const graph_type &graph) : m_graph{graph} {}
 
   // Breadth first traversal of the graph. Applying func to every vertex in order.
   // Returns true if predicate returns true at some vertex. Othervise returns false.
-  template <typename F> auto operator()(const value_type &root_val, F func) const {
-    if (!m_graph.contains(root_val)) throw std::logic_error{"Non-existing vertex root in BFS"};
+  template <typename F> auto operator()(const key_type &root, F func) const {
+    if (!m_graph.contains(root)) throw std::out_of_range{"Search root out of range"};
+    constexpr auto can_break = std::convertible_to<std::invoke_result_t<F, key_type>, bool>;
 
-    std::unordered_map<value_type, bfs_node, typename graph_t::hash_type> nodes;
-    auto &&root_node = nodes.insert({root_val, {}}).first->second;
-    root_node.m_color = color_t::E_GRAY;
-    root_node.m_dist = 0;
+    std::unordered_map<key_type, bfs_node, hash_type> nodes;
+    auto &root_node = nodes.insert({root, {}}).first->second;
+    root_node.m_color = bfs_color::E_GRAY;
 
-    std::deque<value_type> que;
-    que.push_back(root_val);
-    while (!que.empty()) {
-      auto &&curr = que.front();
+    std::deque<key_type> queue;
+    queue.push_back(root);
 
-      if constexpr (std::convertible_to<std::invoke_result_t<F, key_type>, bool>) {
+    while (!queue.empty()) {
+      auto &&curr = queue.front();
+
+      if constexpr (can_break) {
         if (func(curr)) return true;
       } else {
         func(curr);
       }
 
-      que.pop_front();
-      auto &&curr_node = nodes.insert({curr, {}}).first->second;
-      auto &&curr_graph_node = m_graph.find(curr)->second;
-      for (auto &&adj : curr_graph_node) {
-        auto &&adj_node = nodes.insert({adj, {}}).first->second;
-        if (adj_node.m_color == color_t::E_WHITE) {
-          adj_node.m_color = color_t::E_GRAY;
-          adj_node.m_dist = curr_node.m_dist + 1;
-          adj_node.m_prev = &curr_node;
-          que.push_back(adj);
+      queue.pop_front();
+      auto &curr_node = nodes.insert({curr, {}}).first->second;
+      const auto &curr_graph_node = m_graph.find(curr)->second;
+
+      for (const auto &adj : curr_graph_node) {
+        const auto key = t_graph::get_key(adj);
+        auto &adj_node = nodes.insert({key, {}}).first->second;
+
+        if (adj_node.m_color == bfs_color::E_WHITE) {
+          adj_node.m_color = bfs_color::E_GRAY;
+          queue.push_back(key);
         }
       }
-      curr_node.m_color = color_t::E_BLACK;
+
+      curr_node.m_color = bfs_color::E_BLACK;
     }
 
-    if constexpr (std::convertible_to<std::invoke_result_t<F, key_type>, bool>) {
-      return false;
-    }
+    if constexpr (can_break) return false;
   }
 };
 
 template <graph graph_t> std::vector<typename graph_t::value_type> recursive_topo_sort(graph_t &graph) {
   using value_type = typename graph_t::value_type;
-  enum class color_t {
+
+  enum class node_color {
     E_WHITE,
     E_GRAY,
     E_BLACK
   };
 
   struct bfs_node {
-    color_t m_color = color_t::E_WHITE;
+    node_color m_color = node_color::E_WHITE;
     bfs_node *m_prev = nullptr;
   };
 
@@ -467,23 +473,23 @@ template <graph graph_t> std::vector<typename graph_t::value_type> recursive_top
 
   const auto dfs_visit = [&nodes, &graph, &scheduled](const value_type &val, auto &&dfs_visit) -> void {
     auto &cur_node = nodes.at(val);
-    cur_node.m_color = color_t::E_GRAY;
+    cur_node.m_color = node_color::E_GRAY;
     auto &graph_node = graph.find(val)->second;
 
     for (auto &adj : graph_node) {
       auto &adj_node = nodes.at(adj);
-      if (adj_node.m_color == color_t::E_WHITE) {
+      if (adj_node.m_color == node_color::E_WHITE) {
         adj_node.m_prev = &cur_node;
         dfs_visit(adj, dfs_visit);
       }
     }
 
-    cur_node.m_color = color_t::E_BLACK;
+    cur_node.m_color = node_color::E_BLACK;
     scheduled.push_back(val);
   };
 
   for (auto &&val : graph) {
-    if (nodes.at(val.first).m_color != color_t::E_WHITE) continue;
+    if (nodes.at(val.first).m_color != node_color::E_WHITE) continue;
     dfs_visit(val.first, dfs_visit);
   }
 
