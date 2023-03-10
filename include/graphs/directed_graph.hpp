@@ -43,10 +43,7 @@ template <typename t_key, typename t_attr, typename t_edge> struct adjacency_lis
   using type = std::vector<entry_type>;
 
 public:
-  static key_type &get_key_value(value_type &val) { return val.first; }
   static const key_type &get_key_value(const value_type &val) { return val.first; }
-
-  static key_type &get_key_entry(entry_type &entry) { return entry.first; }
   static const key_type &get_key_entry(const entry_type &entry) { return entry.first; }
 };
 
@@ -59,10 +56,7 @@ template <typename t_key, typename t_attr> struct adjacency_list_traits<t_key, t
   using type = std::vector<entry_type>;
 
 public:
-  static key_type &get_key_value(value_type &val) { return val.first; }
   static const key_type &get_key_value(const value_type &val) { return val.first; }
-
-  static key_type &get_key_entry(entry_type &entry) { return entry; }
   static const key_type &get_key_entry(const entry_type &entry) { return entry; }
 };
 
@@ -75,10 +69,7 @@ template <typename t_key, typename t_edge> struct adjacency_list_traits<t_key, v
   using type = std::vector<entry_type>;
 
 public:
-  static key_type &get_key_value(value_type &val) { return val; }
   static const key_type &get_key_value(const value_type &val) { return val; }
-
-  static key_type &get_key_entry(entry_type &entry) { return entry.first; }
   static const key_type &get_key_entry(const entry_type &entry) { return entry.first; }
 };
 
@@ -90,10 +81,7 @@ template <typename t_key> struct adjacency_list_traits<t_key, void, void> {
   using type = std::vector<entry_type>;
 
 public:
-  static key_type &get_key_value(value_type &val) { return val; }
   static const key_type &get_key_value(const value_type &val) { return val; }
-
-  static key_type &get_key_entry(entry_type &entry) { return entry; }
   static const key_type &get_key_entry(const entry_type &entry) { return entry; }
 };
 
@@ -316,6 +304,14 @@ struct bfs_node {
   bfs_color m_color = bfs_color::E_WHITE;
 };
 
+template <typename T, bool t_add> struct cond_add_const {};
+template <typename T> struct cond_add_const<T, false> {
+  using type = T;
+};
+
+template <typename T> struct cond_add_const<T, true> : public std::add_const<T> {};
+template <typename T, bool t_add> using cond_add_const_t = typename cond_add_const<T, t_add>::type;
+
 }; // namespace detail
 
 template <graph t_graph> using graph_key_t = typename t_graph::key_type;
@@ -324,23 +320,25 @@ template <graph t_graph> using graph_hash_t = typename t_graph::hash_type;
 template <graph t_graph> using graph_comp_t = typename t_graph::comp_type;
 
 template <graph t_graph, std::invocable<graph_node_t<t_graph>> F>
-auto breadth_first_search(const t_graph &graph, const graph_key_t<t_graph> &root, F func) {
+auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F func) {
   using graph_type = t_graph;
 
   using key_type = graph_key_t<graph_type>;
   using hash_type = graph_hash_t<graph_type>;
-  using node_type = graph_node_t<graph_type>;
+  using node_type = detail::cond_add_const_t<graph_node_t<graph_type>, std::is_const_v<t_graph>>;
   using comp_type = graph_comp_t<graph_type>;
 
   using detail::bfs_color;
   using detail::bfs_node;
+
+  using node_ptr = node_type *;
 
   if (!graph.contains(root)) throw std::out_of_range{"Search root out of range"};
   constexpr auto can_break = std::convertible_to<std::invoke_result_t<F, node_type>, bool>;
 
   std::unordered_map<key_type, bfs_node, hash_type, comp_type> nodes;
   nodes.insert({root, bfs_node{bfs_color::E_GRAY}});
-  std::deque<const node_type *> queue;
+  std::deque<node_ptr> queue;
 
   queue.push_back(std::addressof(graph.find(root)->second));
 
@@ -419,7 +417,9 @@ public:
   auto rend() { return m_adj_list.rend(); }
   auto crbegin() const { return m_adj_list.crbegin(); }
   auto crend() const { return m_adj_list.crend(); }
+
   auto find(const key_type &val) const { return m_adj_list.find(val); }
+  auto find(const key_type &val) { return m_adj_list.find(val); }
 
   bool connected(const key_type &first, const key_type &second) const {
     if (!(m_adj_list.contains(first) && m_adj_list.contains(second))) return false;
@@ -448,10 +448,7 @@ public:
     return m_adj_list[val].size();
   }
 
-  static key_type &key_from_value(value_type &val) { return traits::get_key_value(val); }
   static const key_type &key_from_value(const value_type &val) { return traits::get_key_value(val); }
-
-  static key_type &key_from_entry(entry_type &entry) { return traits::get_key_entry(entry); }
   static const key_type &key_from_entry(const entry_type &entry) { return traits::get_key_entry(entry); }
 };
 

@@ -74,6 +74,7 @@ TEST(test_directed_graph, test_connected) {
 TEST(test_directed_graph, test_custom_hash_connected) {
   const auto hash_int = [](int v) { return static_cast<unsigned>(v); };
   graphs::basic_directed_graph<int, void, void, decltype(hash_int)> A;
+
   A.insert(3, 6);
   A.insert(3, 5);
   A.insert(5, 4);
@@ -93,6 +94,7 @@ TEST(test_directed_graph, test_custom_hash_connected) {
 
 TEST(test_directed_graph, test_reachable) {
   directed_graph A;
+
   A.insert(3, 6);
   A.insert(3, 5);
   A.insert(5, 4);
@@ -189,6 +191,7 @@ TEST(test_directed_graph, test_custom_hash_topological_sort) {
 
   std::vector<int> res = graphs::recursive_topo_sort(A);
   std::vector ans = {3, 4, 2, 1};
+
   EXPECT_EQ(res, ans);
 }
 
