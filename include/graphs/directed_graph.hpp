@@ -109,14 +109,14 @@ public:
   using edge_type = t_edge;
   using key_type = t_key;
 
-private:
-  value_type m_val;
+public:
+  value_type value;
 
   using adjacency_list = typename traits::type;
 
 public:
-  explicit basic_graph_node(const value_type &val) : m_val{val} {}
-  explicit basic_graph_node(value_type &&val) : m_val{std::move(val)} {}
+  explicit basic_graph_node(const value_type &p_val) : value{p_val} {}
+  explicit basic_graph_node(value_type &&p_val) : value{std::move(p_val)} {}
 
   using adjacency_list::begin;
   using adjacency_list::cbegin;
@@ -125,8 +125,11 @@ public:
   using adjacency_list::end;
   using adjacency_list::size;
 
-  const key_type &key() const & { return m_val.key; }
-  const value_type &value() const & { return m_val; }
+  value_type *operator->() { return &value; }
+  const value_type *operator->() const { return &value; }
+
+  value_type &operator*() & { return value; }
+  const value_type &operator*() const & { return value; }
 
   template <comparator<key_type> t_comp> bool add_adj(const entry_type &val, const t_comp &comp) {
     if (std::find_if(begin(), end(), [&comp, &val](const entry_type &lhs) { return comp(lhs.key, val.key); }) !=
@@ -182,8 +185,6 @@ concept graph = requires() {
   requires comparator<typename t_graph::comp_type, graph_node_key_t<node_type>>;
 };
 // clang-format on
-
-template <graph> class breadth_first_searcher;
 
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
 class base_directed_graph_storage : protected t_hash, protected t_comp {
@@ -383,8 +384,8 @@ auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F fu
   queue.push_back(std::addressof(graph.find(root)->second));
 
   while (!queue.empty()) {
-    const node_type &curr = *queue.front(); // Get the reference to the queued node.
-    const auto &curr_key = curr.key();
+    node_type &curr = *queue.front(); // Get the reference to the queued node.
+    const auto &curr_key = curr->key;
 
     if constexpr (can_break) {
       if (func(curr)) return true;
@@ -395,7 +396,7 @@ auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F fu
     queue.pop_front();
 
     auto &curr_node = nodes.insert({curr_key, {}}).first->second;
-    const auto &curr_graph_node = graph.find(curr.key())->second;
+    const auto &curr_graph_node = graph.find(curr->key)->second;
 
     for (const auto &adj : curr_graph_node) {
       const auto key = adj.key;
@@ -474,7 +475,7 @@ public:
 
   // Returns true if there exists a path from first -> .... -> second
   bool reachable(const key_type &first, const key_type &second) const {
-    return breadth_first_search(*this, first, [&second](auto &&val) { return val.key() == second; });
+    return breadth_first_search(*this, first, [&second](auto &&val) { return val->key == second; });
   }
 
   // Returns number of val's successors in the graph

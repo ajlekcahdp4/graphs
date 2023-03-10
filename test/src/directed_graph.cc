@@ -122,10 +122,10 @@ TEST(test_directed_graph, test_BFT_search) {
 
   const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
 
-  EXPECT_TRUE(bfs(3, [](auto &&val) { return val.key() == 2; }));
-  EXPECT_TRUE(bfs(2, [](auto &&val) { return val.key() == 5; }));
-  EXPECT_FALSE(bfs(2, [](auto &&val) { return val.key() == 3; }));
-  EXPECT_FALSE(bfs(4, [](auto &&val) { return val.key() == 11; }));
+  EXPECT_TRUE(bfs(3, [](auto &&node) { return node->key == 2; }));
+  EXPECT_TRUE(bfs(2, [](auto &&node) { return node->key == 5; }));
+  EXPECT_FALSE(bfs(2, [](auto &&node) { return node->key == 3; }));
+  EXPECT_FALSE(bfs(4, [](auto &&node) { return node->key == 11; }));
 }
 
 TEST(test_directed_graph, test_BFT_schedule) {
@@ -141,7 +141,7 @@ TEST(test_directed_graph, test_BFT_schedule) {
 
   const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
   std::vector<int> res, ans = {3, 6, 5, 4, 2};
-  bfs(3, [&res](auto &&val) { res.push_back(val.key()); });
+  bfs(3, [&res](auto &&node) { res.push_back(node->key); });
   EXPECT_EQ(res, ans);
 }
 
@@ -159,7 +159,7 @@ TEST(test_directed_graph, test_custom_hash_BFT_search) {
 
   const auto bfs = [&A](auto &&key, auto &&func) { return breadth_first_search(A, key, func); };
   std::vector<int> res;
-  bfs(3, [&res](auto &&val) { res.push_back(val.key()); });
+  bfs(3, [&res](auto &&node) { res.push_back(node->key); });
 
   std::vector<int> ans = {3, 6, 5, 4, 2};
   EXPECT_EQ(res, ans);
@@ -222,12 +222,12 @@ TEST(test_directed_graph, test_attributes_1) {
   EXPECT_TRUE(A.connected("1", "2"));
 
   auto found = A.find("1");
-  auto [key, attr] = found->second.value();
+  auto [key, attr] = *found->second;
   EXPECT_EQ(key, "1");
   EXPECT_EQ(attr, 1);
 
   using graphs::breadth_first_search;
-  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&node) -> bool { return node->key == "2"; }));
 }
 
 TEST(test_directed_graph, test_attributes_2) {
@@ -235,17 +235,19 @@ TEST(test_directed_graph, test_attributes_2) {
 
   EXPECT_TRUE(A.insert({"1", 1}));
   EXPECT_TRUE(A.insert({"2", 0}));
+  EXPECT_TRUE(A.insert({"3", 2}));
 
   EXPECT_TRUE(A.create_link("1", "2"));
+  EXPECT_TRUE(A.create_link("2", "3"));
   EXPECT_TRUE(A.connected("1", "2"));
 
   auto found = A.find("1");
-  auto [key, attr] = found->second.value();
+  auto [key, attr] = *found->second;
   EXPECT_EQ(key, "1");
   EXPECT_EQ(attr, 1);
 
   using graphs::breadth_first_search;
-  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&node) -> bool { return node->attr == 2; }));
 }
 
 TEST(test_directed_graph, test_attributes_3) {
@@ -258,9 +260,9 @@ TEST(test_directed_graph, test_attributes_3) {
   EXPECT_TRUE(A.connected("1", "2"));
 
   auto found = A.find("1");
-  auto key = found->second.key();
+  auto key = found->second->key;
   EXPECT_EQ(key, "1");
 
   using graphs::breadth_first_search;
-  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&val) -> bool { return val.key() == "2"; }));
+  EXPECT_TRUE(breadth_first_search(A, "1", [](auto &&node) -> bool { return node->key == "2"; }));
 }
