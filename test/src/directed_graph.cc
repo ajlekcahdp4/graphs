@@ -176,7 +176,11 @@ TEST(test_directed_graph, test_topological_sort) {
 
   const auto res = graphs::recursive_topo_sort(A);
   std::vector ans = {3, 4, 2, 1};
-  EXPECT_EQ(res, ans);
+
+  const auto match =
+      std::equal(res.begin(), res.end(), ans.begin(), ans.end(), [](auto &&lhs, auto &&rhs) { return lhs.key == rhs; });
+
+  EXPECT_TRUE(match);
 }
 
 TEST(test_directed_graph, test_custom_hash_topological_sort) {
@@ -189,10 +193,13 @@ TEST(test_directed_graph, test_custom_hash_topological_sort) {
   A.insert(2, 4);
   A.insert(4, 3);
 
-  std::vector<int> res = graphs::recursive_topo_sort(A);
+  const auto res = graphs::recursive_topo_sort(A);
   std::vector ans = {3, 4, 2, 1};
 
-  EXPECT_EQ(res, ans);
+  const auto match =
+      std::equal(res.begin(), res.end(), ans.begin(), ans.end(), [](auto &&lhs, auto &&rhs) { return lhs.key == rhs; });
+
+  EXPECT_TRUE(match);
 }
 
 TEST(test_directed_graph, test_edge_attributes) {
@@ -251,7 +258,7 @@ TEST(test_directed_graph, test_attributes_3) {
   EXPECT_TRUE(A.connected("1", "2"));
 
   auto found = A.find("1");
-  auto key = found->second.value();
+  auto key = found->second.key();
   EXPECT_EQ(key, "1");
 
   using graphs::breadth_first_search;
