@@ -335,16 +335,6 @@ protected:
 
 namespace detail {
 
-enum class bfs_color {
-  E_WHITE,
-  E_GRAY,
-  E_BLACK
-};
-
-struct bfs_node {
-  bfs_color m_color = bfs_color::E_WHITE;
-};
-
 template <typename T, bool t_add> struct cond_add_const {};
 template <typename T> struct cond_add_const<T, false> {
   using type = T;
@@ -355,6 +345,7 @@ template <typename T, bool t_add> using cond_add_const_t = typename cond_add_con
 
 }; // namespace detail
 
+template <graph t_graph> using graph_value_t = typename t_graph::value_type;
 template <graph t_graph> using graph_key_t = typename t_graph::key_type;
 template <graph t_graph> using graph_node_t = typename t_graph::node_type;
 template <graph t_graph> using graph_hash_t = typename t_graph::hash_type;
@@ -369,8 +360,15 @@ auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F fu
   using node_type = detail::cond_add_const_t<graph_node_t<graph_type>, std::is_const_v<t_graph>>;
   using comp_type = graph_comp_t<graph_type>;
 
-  using detail::bfs_color;
-  using detail::bfs_node;
+  enum class bfs_color {
+    E_WHITE,
+    E_GRAY,
+    E_BLACK
+  };
+
+  struct bfs_node {
+    bfs_color m_color = bfs_color::E_WHITE;
+  };
 
   using node_ptr = node_type *;
 
@@ -492,7 +490,7 @@ template <typename K, typename A, typename E, hasher<K> t_hash = std::hash<K>, c
 using basic_directed_graph = directed_graph<basic_graph_node<K, A, E>, t_hash, t_comp>;
 
 template <graph t_graph> std::vector<typename t_graph::value_type> recursive_topo_sort(t_graph &graph) {
-  using value_type = typename t_graph::value_type;
+  using value_type = graph_value_t<t_graph>;
   using key_type = graph_key_t<t_graph>;
 
   enum class node_color {
