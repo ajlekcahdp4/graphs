@@ -16,6 +16,10 @@ using dag = graphs::dag<int>;
 
 TEST(test_dag, test_insert) {
   dag A;
+
+  A.insert(1);
+  A.insert(2);
+
   EXPECT_TRUE(A.insert(1, 2));
   EXPECT_TRUE(A.insert(1, 3));
   EXPECT_TRUE(A.insert(1, 4));
@@ -24,13 +28,15 @@ TEST(test_dag, test_insert) {
 
   EXPECT_EQ(A.edges(), 5);
   EXPECT_EQ(A.vertices(), 4);
+
   EXPECT_TRUE(A.contains(1));
   EXPECT_TRUE(A.contains(2));
   EXPECT_TRUE(A.contains(3));
   EXPECT_TRUE(A.contains(4));
   EXPECT_FALSE(A.contains(11));
-  EXPECT_TRUE(A.contains(1, 2));
-  EXPECT_TRUE(A.contains(1, 3));
-  EXPECT_TRUE(A.contains(1, 4));
-  EXPECT_FALSE(A.contains(3, 2)); // cycle
+
+  EXPECT_TRUE(A.connected(1, 2));
+  EXPECT_TRUE(A.connected(1, 3));
+  EXPECT_TRUE(A.connected(1, 4));
+  EXPECT_FALSE(A.connected(3, 2));
 }
