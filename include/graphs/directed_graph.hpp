@@ -510,25 +510,26 @@ template <graph t_graph> std::vector<typename t_graph::value_type> recursive_top
     nodes.insert({val.first, bfs_node{}});
   }
 
-  const auto dfs_visit = [&nodes, &graph, &scheduled](const value_type &val, auto &&dfs_visit) -> void {
-    auto &cur_node = nodes.at(val.key);
+  const auto dfs_visit = [&nodes, &graph, &scheduled](const key_type &key, auto &&dfs_visit) -> void {
+    auto &cur_node = nodes.at(key);
     cur_node.m_color = node_color::E_GRAY;
-    auto &graph_node = graph.find(val.key)->second;
+    auto &graph_node = graph.find(key)->second;
 
     for (auto &adj : graph_node) {
       auto &adj_node = nodes.at(adj.key);
       if (adj_node.m_color == node_color::E_WHITE) {
-        dfs_visit(adj, dfs_visit);
+        dfs_visit(key, dfs_visit);
       }
     }
 
     cur_node.m_color = node_color::E_BLACK;
-    scheduled.push_back(val);
+    scheduled.push_back(graph_node.value);
   };
 
-  for (auto &&val : graph) {
-    if (nodes.at(val.first).m_color != node_color::E_WHITE) continue;
-    dfs_visit(val.first, dfs_visit);
+  for (auto &&it : graph) {
+    auto &&key = it.first;
+    if (nodes.at(key).m_color != node_color::E_WHITE) continue;
+    dfs_visit(key, dfs_visit);
   }
 
   return scheduled;
