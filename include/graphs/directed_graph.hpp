@@ -525,7 +525,7 @@ template <graph t_graph> auto recursive_topo_sort(const t_graph &graph) {
     scheduled.push_back(graph_node.value);
   };
 
-  for (const auto &it : graph) {
+  for (const auto &it : nodes) {
     auto key = it.first;
     if (nodes.at(key).m_color == node_color::E_WHITE) {
       dfs_visit(key, dfs_visit);
