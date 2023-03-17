@@ -489,7 +489,7 @@ public:
 template <typename K, typename A, typename E, hasher<K> t_hash = std::hash<K>, comparator<K> t_comp = std::equal_to<K>>
 using basic_directed_graph = directed_graph<basic_graph_node<K, A, E>, t_hash, t_comp>;
 
-template <graph t_graph> std::vector<typename t_graph::value_type> recursive_topo_sort(t_graph &graph) {
+template <graph t_graph> auto recursive_topo_sort(const t_graph &graph) {
   using value_type = graph_value_t<t_graph>;
   using key_type = graph_key_t<t_graph>;
 
@@ -511,25 +511,25 @@ template <graph t_graph> std::vector<typename t_graph::value_type> recursive_top
   }
 
   const auto dfs_visit = [&nodes, &graph, &scheduled](const key_type &key, auto &&dfs_visit) -> void {
-    auto &cur_node = nodes.at(key);
-    cur_node.m_color = node_color::E_GRAY;
-    auto &graph_node = graph.find(key)->second;
+    nodes.at(key).m_color = node_color::E_GRAY;
+    auto graph_node = graph.find(key)->second;
 
-    for (auto &adj : graph_node) {
-      auto &adj_node = nodes.at(adj.key);
+    for (const auto &adj : graph_node) {
+      auto adj_node = nodes.at(adj.key);
       if (adj_node.m_color == node_color::E_WHITE) {
-        dfs_visit(key, dfs_visit);
+        dfs_visit(adj.key, dfs_visit);
       }
     }
 
-    cur_node.m_color = node_color::E_BLACK;
+    nodes.at(key).m_color = node_color::E_BLACK;
     scheduled.push_back(graph_node.value);
   };
 
-  for (auto &&it : graph) {
-    auto &&key = it.first;
-    if (nodes.at(key).m_color != node_color::E_WHITE) continue;
-    dfs_visit(key, dfs_visit);
+  for (const auto &it : graph) {
+    auto key = it.first;
+    if (nodes.at(key).m_color == node_color::E_WHITE) {
+      dfs_visit(key, dfs_visit);
+    }
   }
 
   return scheduled;
