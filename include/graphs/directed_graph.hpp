@@ -36,7 +36,8 @@ concept hasher = std::invocable<t_hash, t_key> && std::default_initializable<t_h
 
 template <typename t_key> struct helper_key {
   const t_key key;
-  template <typename T> requires (!std::same_as<std::remove_cvref_t<T>, helper_key>)
+  template <typename T>
+    requires(!std::same_as<std::remove_cvref_t<T>, helper_key>)
   helper_key(T &&p_key) : key(std::forward<T>(p_key)) {}
 };
 
@@ -245,16 +246,16 @@ private:
   using base_type = base_directed_graph_storage<t_node, t_hash, t_comp>;
 
 protected:
-  using base_type::traits;
+  using typename base_type::traits;
 
 public:
-  using base_type::node_type;
-  using base_type::key_type;
-  using base_type::value_type;
-  using base_type::edge_type;
-  using base_type::size_type;
-  using base_type::hash_type;
-  using base_type::comp_type;
+  using typename base_type::comp_type;
+  using typename base_type::edge_type;
+  using typename base_type::hash_type;
+  using typename base_type::key_type;
+  using typename base_type::node_type;
+  using typename base_type::size_type;
+  using typename base_type::value_type;
 
 protected:
   using base_type::m_adj_list;
