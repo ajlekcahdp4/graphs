@@ -36,7 +36,8 @@ concept hasher = std::invocable<t_hash, t_key> && std::default_initializable<t_h
 
 template <typename t_key> struct helper_key {
   const t_key key;
-  template <typename T> helper_key(T &&p_key) : key{std::forward<T>(p_key)} {}
+  template <typename T> requires (!std::same_as<std::remove_cvref_t<T>, helper_key>)
+  helper_key(T &&p_key) : key(std::forward<T>(p_key)) {}
 };
 
 template <typename t_key, typename t_attr, typename t_edge> struct adjacency_list_traits {
@@ -187,7 +188,7 @@ concept graph = requires() {
 // clang-format on
 
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
-class base_directed_graph_storage : protected t_hash, protected t_comp {
+class base_directed_graph_storage {
 public:
   using node_type = t_node;
 
@@ -208,14 +209,17 @@ protected:
   std::unordered_map<key_type, node_type, hash_type, comp_type> m_adj_list;
   size_type m_edge_n = 0;
 
+  hash_type m_hash = hash_type{};
+  comp_type m_comp = comp_type{};
+
 protected:
   base_directed_graph_storage() = default;
 
   // Check whether a vertex is present
   bool contains(const key_type &val) const { return m_adj_list.contains(val); }
 
-  const hash_type &hash() const & { return static_cast<const hash_type &>(*this); }
-  const comp_type &comp() const & { return static_cast<const comp_type &>(*this); }
+  const hash_type &hash() const & { return m_hash; }
+  const comp_type &comp() const & { return m_comp; }
 
   // Insertes a vertex if it's not contained in the graph
   bool insert(const value_type &val) {
@@ -241,16 +245,16 @@ private:
   using base_type = base_directed_graph_storage<t_node, t_hash, t_comp>;
 
 protected:
-  using traits = typename base_type::traits;
+  using base_type::traits;
 
 public:
-  using node_type = typename base_type::node_type;
-  using key_type = typename base_type::key_type;
-  using value_type = typename base_type::value_type;
-  using edge_type = typename base_type::edge_type;
-  using size_type = typename base_type::size_type;
-  using hash_type = typename base_type::hash_type;
-  using comp_type = typename base_type::comp_type;
+  using base_type::node_type;
+  using base_type::key_type;
+  using base_type::value_type;
+  using base_type::edge_type;
+  using base_type::size_type;
+  using base_type::hash_type;
+  using base_type::comp_type;
 
 protected:
   using base_type::m_adj_list;
@@ -413,7 +417,7 @@ auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F fu
 }
 
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
-class directed_graph : private directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>> {
+class directed_graph : protected directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>> {
   using base_type = directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>>;
 
 public:
