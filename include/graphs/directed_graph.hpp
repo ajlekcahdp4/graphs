@@ -36,7 +36,9 @@ concept hasher = std::invocable<t_hash, t_key> && std::default_initializable<t_h
 
 template <typename t_key> struct helper_key {
   const t_key key;
-  template <typename T> helper_key(T &&p_key) : key{std::forward<T>(p_key)} {}
+  template <typename T>
+    requires(!std::same_as<std::remove_cvref_t<T>, helper_key>)
+  helper_key(T &&p_key) : key(std::forward<T>(p_key)) {}
 };
 
 template <typename t_key, typename t_attr, typename t_edge> struct adjacency_list_traits {
@@ -187,7 +189,7 @@ concept graph = requires() {
 // clang-format on
 
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
-class base_directed_graph_storage : protected t_hash, protected t_comp {
+class base_directed_graph_storage {
 public:
   using node_type = t_node;
 
@@ -208,14 +210,17 @@ protected:
   std::unordered_map<key_type, node_type, hash_type, comp_type> m_adj_list;
   size_type m_edge_n = 0;
 
+  hash_type m_hash = hash_type{};
+  comp_type m_comp = comp_type{};
+
 protected:
   base_directed_graph_storage() = default;
 
   // Check whether a vertex is present
   bool contains(const key_type &val) const { return m_adj_list.contains(val); }
 
-  const hash_type &hash() const & { return static_cast<const hash_type &>(*this); }
-  const comp_type &comp() const & { return static_cast<const comp_type &>(*this); }
+  const hash_type &hash() const & { return m_hash; }
+  const comp_type &comp() const & { return m_comp; }
 
   // Insertes a vertex if it's not contained in the graph
   bool insert(const value_type &val) {
@@ -241,16 +246,16 @@ private:
   using base_type = base_directed_graph_storage<t_node, t_hash, t_comp>;
 
 protected:
-  using traits = typename base_type::traits;
+  using typename base_type::traits;
 
 public:
-  using node_type = typename base_type::node_type;
-  using key_type = typename base_type::key_type;
-  using value_type = typename base_type::value_type;
-  using edge_type = typename base_type::edge_type;
-  using size_type = typename base_type::size_type;
-  using hash_type = typename base_type::hash_type;
-  using comp_type = typename base_type::comp_type;
+  using typename base_type::comp_type;
+  using typename base_type::edge_type;
+  using typename base_type::hash_type;
+  using typename base_type::key_type;
+  using typename base_type::node_type;
+  using typename base_type::size_type;
+  using typename base_type::value_type;
 
 protected:
   using base_type::m_adj_list;
@@ -413,7 +418,7 @@ auto breadth_first_search(t_graph &graph, const graph_key_t<t_graph> &root, F fu
 }
 
 template <graph_node t_node, hasher<graph_node_key_t<t_node>> t_hash, comparator<graph_node_key_t<t_node>> t_comp>
-class directed_graph : private directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>> {
+class directed_graph : protected directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>> {
   using base_type = directed_graph_storage<t_node, t_hash, t_comp, graph_node_edge_t<t_node>>;
 
 public:
@@ -489,7 +494,7 @@ public:
 template <typename K, typename A, typename E, hasher<K> t_hash = std::hash<K>, comparator<K> t_comp = std::equal_to<K>>
 using basic_directed_graph = directed_graph<basic_graph_node<K, A, E>, t_hash, t_comp>;
 
-template <graph t_graph> std::vector<typename t_graph::value_type> recursive_topo_sort(t_graph &graph) {
+template <graph t_graph> auto recursive_topo_sort(const t_graph &graph) {
   using value_type = graph_value_t<t_graph>;
   using key_type = graph_key_t<t_graph>;
 
@@ -510,25 +515,26 @@ template <graph t_graph> std::vector<typename t_graph::value_type> recursive_top
     nodes.insert({val.first, bfs_node{}});
   }
 
-  const auto dfs_visit = [&nodes, &graph, &scheduled](const value_type &val, auto &&dfs_visit) -> void {
-    auto &cur_node = nodes.at(val.key);
-    cur_node.m_color = node_color::E_GRAY;
-    auto &graph_node = graph.find(val.key)->second;
+  const auto dfs_visit = [&nodes, &graph, &scheduled](const key_type &key, auto &&dfs_visit) -> void {
+    nodes.at(key).m_color = node_color::E_GRAY;
+    auto graph_node = graph.find(key)->second;
 
-    for (auto &adj : graph_node) {
-      auto &adj_node = nodes.at(adj.key);
+    for (const auto &adj : graph_node) {
+      auto adj_node = nodes.at(adj.key);
       if (adj_node.m_color == node_color::E_WHITE) {
-        dfs_visit(adj, dfs_visit);
+        dfs_visit(adj.key, dfs_visit);
       }
     }
 
-    cur_node.m_color = node_color::E_BLACK;
-    scheduled.push_back(val);
+    nodes.at(key).m_color = node_color::E_BLACK;
+    scheduled.push_back(graph_node.value);
   };
 
-  for (auto &&val : graph) {
-    if (nodes.at(val.first).m_color != node_color::E_WHITE) continue;
-    dfs_visit(val.first, dfs_visit);
+  for (const auto &it : nodes) {
+    auto key = it.first;
+    if (nodes.at(key).m_color == node_color::E_WHITE) {
+      dfs_visit(key, dfs_visit);
+    }
   }
 
   return scheduled;
