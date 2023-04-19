@@ -27,7 +27,7 @@ jobs:
 
     - name: CMake config
       run: |
-        cmake -S ./ -B build -DCMAKE_BUILD_TYPE=Release
+        cmake -S ./ -B build -DCMAKE_BUILD_TYPE=Release -DGRAPHS_BUILD_TESTS=True
     - name: CMake build
       run: |
         cmake --build build
