@@ -33,5 +33,5 @@ jobs:
         cmake --build build
     - name: CMake test
       run: |
-        env CTEST_OUTPUT_ON_FAILURE=1
+        env CTEST_OUTPUT_ON_FAILURE=2
         cmake --build build --target test
