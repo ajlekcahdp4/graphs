@@ -1,0 +1,37 @@
+name: Build and Test CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install libgtest-dev cmake
+    
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: CMake config
+      run: |
+        cmake -S ./ -B build -DCMAKE_BUILD_TYPE=Release
+    - name: CMake build
+      run: |
+        cmake --build build
+    - name: CMake test
+      run: |
+        env CTEST_OUTPUT_ON_FAILURE=1
+        cmake --build build --target test
