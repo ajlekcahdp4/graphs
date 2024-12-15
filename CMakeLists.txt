@@ -22,3 +22,9 @@ if(GRAPHS_BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 endif()
+
+install(FILES
+  include/graphs/directed_graph.hpp
+  include/graphs/dag.hpp
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/graphs
+)
